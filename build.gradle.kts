@@ -30,6 +30,9 @@ kotlin {
             }
         }
         val jvmTest by getting
+        all {
+            languageSettings.optIn("kotlin.RequiresOptIn")
+        }
     }
 }
 
@@ -38,7 +41,7 @@ compose.desktop {
         mainClass = "MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "cucumberconverter"
+            packageName = "Cucumber Converter"
             packageVersion = "1.0.0"
         }
     }
