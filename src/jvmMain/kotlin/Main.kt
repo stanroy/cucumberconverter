@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import navigation.Screen
@@ -22,7 +21,7 @@ fun App() {
             navBar(modifier = Modifier.fillMaxWidth(), screenState = screenState.value,
                 onScreenStateChange = { newScreen -> screenState.value = newScreen })
             when (screenState.value) {
-                is Screen.GenerateScreen -> generateScreen(){}
+                is Screen.GenerateScreen -> generateScreen() {}
                 is Screen.ResultsScreen -> resultsScreen()
             }
         }
