@@ -27,7 +27,7 @@ fun generateScreen(onGenerate: (results: List<String>) -> Unit) {
         Button(
             modifier = Modifier.fillMaxWidth().fillMaxHeight(0.1f), onClick = {
                 val scenarios = splitScenarios(textInput)
-                createSwiftFunctions(scenarios)
+                onGenerate(createSwiftFunctions(scenarios))
             }, shape = RectangleShape
         ) {
             Text("GENERATE")
@@ -36,49 +36,97 @@ fun generateScreen(onGenerate: (results: List<String>) -> Unit) {
     }
 }
 
-fun createSwiftFunctions(scenarios: List<List<String>>) {
+fun createSwiftFunctions(scenarios: List<List<String>>): List<String> {
+    val functions = mutableListOf<String>()
     scenarios.forEach {
         // scenario main function
         val scenarioList = it.toMutableList()
         val scenarioComment = "//${scenarioList.first().filterNot { char -> char == ':' }}"
         val scenarioMainFunction = "func test_${
-            scenarioComment.removePrefix("//Scenario ").lowercase()
-                .replace(" ", "_").plus("() throws {\n")
+            scenarioComment.removePrefix("//Scenario ").lowercase().replace(" ", "_").plus("() throws {\n")
         }"
         scenarioList.removeFirst()
 
         // scenario step functions
-        var stepFunctions = ""
-        scenarioList.forEach { step ->
-            val comment = "\t//$step\n"
-            val reg = """(\b(When|Then|Given|And|But)\b)""".toRegex()
-            val filterFunc = "\ttry test${
-                step.replace(reg, "").lowercase()
-                    .replace(" ", "_").plus("()")
-            }"
+        val stepFunctions = filterStepFunctions(scenarioList)
 
-            stepFunctions += comment
-            stepFunctions += "$filterFunc\n\n"
-        }
 
         // scenario full function
         val swiftFunction = "".let { func ->
-            func + "$scenarioComment\n" +
-                    "$scenarioMainFunction\n" +
-                    "${stepFunctions.trimEnd()}\n\n" +
+            func + "$scenarioComment\n" + "$scenarioMainFunction\n" + "${stepFunctions.trimEnd()}\n\n" +
                     // close func
-                    "}"
+                    "}\n\n"
         }
 
-        println("Function:\n$swiftFunction")
+        functions.add(swiftFunction)
     }
+    return functions
+}
+
+fun filterStepFunctions(steps: List<String>): String {
+    var stepFunctions = ""
+    steps.forEach { step ->
+        val hasParams = step.contains("\"")
+        val testFunc = createTestFunction(step, hasParams)
+        val comment = testFunc.first
+        val func = testFunc.second
+
+        stepFunctions += comment
+        stepFunctions += "$func\n\n"
+
+    }
+    return stepFunctions
+}
+
+fun createTestFunction(step: String, hasParams: Boolean): Pair<String, String> {
+    val func: String
+    // basic function comment
+    var comment = "\t//$step\n"
+    // regex for step prefix
+    val reg = """(\b(When|Then|Given|And|But)\b)""".toRegex()
+
+    // regex to find params in steps
+    val regParams = "\"([^\"]*)\"".toRegex()
+    val matches = regParams.findAll(step)
+    val results = matches.map { match ->
+        match.value.replace("\"", "")
+    }.toMutableList()
+
+    if (!hasParams) {
+        func = "\ttry test${
+            step.replace(reg, "").lowercase().replace("'", "").replace(" ", "_").plus("()")
+        }"
+    } else {
+        var funcParams = ""
+        val newStep = step.replace(regParams, "").replace("  ", " ").trimEnd()
+        results.forEachIndexed { index, param ->
+            // put params in function comment
+            comment += "\t//param$index: \"$param\"\n"
+            funcParams += "param$index: TYPE, "
+        }
+
+        val funcParamsFiltered = if (results.count() == 1)
+            funcParams.replace(",", "").trimEnd()
+        else funcParams.trimEnd().removeSuffix(",")
+
+        func = "\ttry test${
+            newStep.replace(reg, "")
+                .lowercase()
+                .replace("'", "")
+                .replace(" ", "_")
+                .replace("\"", "")
+                .plus("($funcParamsFiltered)")
+        }"
+    }
+
+    return Pair(comment, func)
 }
 
 fun splitScenarios(text: String): MutableList<List<String>> {
     val regex = """((?=Scenario)|(?=Given)|(?=When)|(?=Then))|(?=And)|(?=But)""".toRegex()
     val filteredList = text.split(regex).filterNot { step ->
         step.isEmpty()
-    }.filterNot { step -> step.contains("#") }.toMutableList()
+    }.filterNot { step -> step.contains("#") }.toMutableList() // remove gherkin comments
     val bufferList = mutableListOf<String>()
     val scenarioParts = mutableListOf<List<String>>()
 
