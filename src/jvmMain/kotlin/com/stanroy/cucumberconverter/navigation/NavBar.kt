@@ -1,3 +1,5 @@
+package com.stanroy.cucumberconverter.navigation
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -9,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
-import com.stanroy.cucumberconverter.navigation.Screen
 
 @Composable
 fun navBar(modifier: Modifier, screenState: State<Screen>, onScreenStateChange: (Screen) -> Unit) {

@@ -1,15 +1,16 @@
+package com.stanroy.cucumberconverter
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 
-@OptIn(ExperimentalComposeUiApi::class)
+
 @Composable
 fun generateScreen(onGenerate: (results: List<String>) -> Unit) {
     var textInput by remember { mutableStateOf("") }
@@ -105,16 +106,11 @@ fun createTestFunction(step: String, hasParams: Boolean): Pair<String, String> {
             funcParams += "param$index: TYPE, "
         }
 
-        val funcParamsFiltered = if (results.count() == 1)
-            funcParams.replace(",", "").trimEnd()
+        val funcParamsFiltered = if (results.count() == 1) funcParams.replace(",", "").trimEnd()
         else funcParams.trimEnd().removeSuffix(",")
 
         func = "\ttry test${
-            newStep.replace(reg, "")
-                .lowercase()
-                .replace("'", "")
-                .replace(" ", "_")
-                .replace("\"", "")
+            newStep.replace(reg, "").lowercase().replace("'", "").replace(" ", "_").replace("\"", "")
                 .plus("($funcParamsFiltered)")
         }"
     }
@@ -122,20 +118,23 @@ fun createTestFunction(step: String, hasParams: Boolean): Pair<String, String> {
     return Pair(comment, func)
 }
 
+// split scenarios line by line
 fun splitScenarios(text: String): MutableList<List<String>> {
-    val regex = """((?=Scenario)|(?=Given)|(?=When)|(?=Then))|(?=And)|(?=But)""".toRegex()
+    val regex = """((?=Scenario)|(?=Given)|(?=When)|(?=Then))|(?=And)|(?=But)|(?=#)|(?=Feature)""".toRegex()
     val filteredList = text.split(regex).filterNot { step ->
         step.isEmpty()
-    }.filterNot { step -> step.contains("#") }.toMutableList() // remove gherkin comments
+    }.filterNot { step -> step.contains("#") }.filterNot { step -> step.contains("Feature") }.toMutableList()
     val bufferList = mutableListOf<String>()
     val scenarioParts = mutableListOf<List<String>>()
 
     while (filteredList.iterator().hasNext()) {
+        // scenario
         if (filteredList.first().contains("Scenario") && bufferList.isEmpty()) {
             bufferList.add(filteredList.first().trimEnd())
             filteredList.removeFirst()
         }
 
+        // scenario steps
         if (!filteredList.iterator().next().contains("Scenario")) {
             bufferList.add(filteredList.iterator().next().trimEnd())
             filteredList.remove(filteredList.iterator().next())
